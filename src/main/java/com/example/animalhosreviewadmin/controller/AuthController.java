@@ -47,7 +47,7 @@ public class AuthController {
 
         try {
             User user = authService.register(registerRequest.getEmail(), registerRequest.getPassword());
-            return ResponseEntity.ok(user);
+            return ResponseEntity.ok(new RegisterResponse(user.getEmail(), user.getRole()));
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
@@ -80,6 +80,17 @@ public class AuthController {
 
         public JwtAuthenticationResponse(String token) {
             this.token = token;
+        }
+    }
+
+    @Data
+    public static class RegisterResponse {
+        private String email;
+        private String role;
+
+        public RegisterResponse(String email, String role) {
+            this.email = email;
+            this.role = role;
         }
     }
 } 
