@@ -2,6 +2,7 @@ package com.example.animalhosreviewadmin.controller;
 
 import com.example.animalhosreviewadmin.domain.User;
 import com.example.animalhosreviewadmin.service.AuthService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -21,9 +22,14 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<?> login(@Valid @RequestBody LoginRequest loginRequest) {
-        String token = authService.login(loginRequest.getEmail(), loginRequest.getPassword());
-        return ResponseEntity.ok(new JwtAuthenticationResponse(token));
+    public ResponseEntity<?> login(@Valid @RequestBody LoginRequest loginRequest, HttpServletRequest request) {
+        try {
+            String token = authService.login(loginRequest.getEmail(), loginRequest.getPassword(), 
+                loginRequest.getMfaCode(), request);
+            return ResponseEntity.ok(new JwtAuthenticationResponse(token));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
     }
 
     @PostMapping("/register")
@@ -53,6 +59,26 @@ public class AuthController {
         }
     }
 
+    @PostMapping("/mfa/setup")
+    public ResponseEntity<?> setupMfa(@Valid @RequestBody MfaSetupRequest request) {
+        try {
+            String qrCodeUri = authService.setupMfa(request.getEmail());
+            return ResponseEntity.ok(new MfaSetupResponse(qrCodeUri));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @PostMapping("/mfa/disable")
+    public ResponseEntity<?> disableMfa(@Valid @RequestBody MfaDisableRequest request) {
+        try {
+            authService.disableMfa(request.getEmail());
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
     @Data
     public static class LoginRequest {
         @NotBlank(message = "이메일은 필수 입력값입니다.")
@@ -61,6 +87,8 @@ public class AuthController {
 
         @NotBlank(message = "비밀번호는 필수 입력값입니다.")
         private String password;
+
+        private String mfaCode;
     }
 
     @Data
@@ -92,5 +120,28 @@ public class AuthController {
             this.email = email;
             this.role = role;
         }
+    }
+
+    @Data
+    public static class MfaSetupRequest {
+        @NotBlank(message = "이메일은 필수 입력값입니다.")
+        @Email(message = "올바른 이메일 형식이 아닙니다.")
+        private String email;
+    }
+
+    @Data
+    public static class MfaSetupResponse {
+        private String qrCodeUri;
+
+        public MfaSetupResponse(String qrCodeUri) {
+            this.qrCodeUri = qrCodeUri;
+        }
+    }
+
+    @Data
+    public static class MfaDisableRequest {
+        @NotBlank(message = "이메일은 필수 입력값입니다.")
+        @Email(message = "올바른 이메일 형식이 아닙니다.")
+        private String email;
     }
 } 
